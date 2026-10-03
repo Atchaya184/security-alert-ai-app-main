@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Security Alerts - Security Alert AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
+  {% include '_nav.html' %}
+
+  <main class="flex-1 max-w-4xl w-full mx-auto p-6 space-y-6">
+    <div>
+      <h1 class="text-xl font-bold text-white flex items-center gap-2">
+        <span>📤</span> Security Alerts CSV Ingestion
+      </h1>
+      <p class="text-xs text-slate-400 mt-1">Upload batches of telemetry alerts. Strict schema validation protects against malformed payloads and state corruption.</p>
+    </div>
+
+    <!-- Upload Card -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-8 shadow-md space-y-6">
+      <div id="dropZone" class="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-xl p-8 text-center cursor-pointer transition-colors bg-slate-950/50">
+        <div class="text-3xl mb-2">📁</div>
+        <p class="text-sm font-semibold text-slate-200">Drag & drop your security alerts CSV file here</p>
+        <p class="text-xs text-slate-500 mt-1">or click to browse files</p>
+        <input type="file" id="csvFileInput" accept=".csv" class="hidden">
+      </div>
+
+      <div class="flex items-center justify-between text-xs text-slate-400">
+        <span>Selected file: <span id="selectedFileName" class="text-indigo-400 font-mono font-medium">None</span></span>
+        <button id="uploadBtn" onclick="submitCsvUpload()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-colors disabled:opacity-50" disabled>
+          Ingest & Process
+        </button>
+      </div>
+
+      <!-- Result Banner -->
+      <div id="uploadResultBanner" class="hidden p-4 rounded-lg text-xs font-mono space-y-1"></div>
+
+      <!-- Edge Case Test Presets -->
+      <div class="border-t border-slate-800 pt-5 space-y-3">
+        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Test Edge-Case Payloads (Requirement 3, Case 1):</h4>
+        <div class="flex flex-wrap gap-2 text-xs">
+          <button onclick="testMalformedCsv('missing_columns')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-rose-300 border border-rose-500/20">
+            Test: Missing Mandatory Columns
+          </button>
+          <button onclick="testMalformedCsv('corrupted_encoding')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/20">
+            Test: Invalid Data Types / Syntax
+          </button>
+          <button onclick="testMalformedCsv('empty_file')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
+            Test: Empty CSV Payload
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/script.js"></script>
+  <script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('csvFileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const selectedFileName = document.getElementById('selectedFileName');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        selectedFileName.innerText = e.target.files[0].name;
+        uploadBtn.disabled = false;
+      }
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-indigo-500');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-indigo-500'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-indigo-500');
+      if (e.dataTransfer.files.length > 0) {
+        fileInput.files = e.dataTransfer.files;
+        selectedFileName.innerText = e.dataTransfer.files[0].name;
+        uploadBtn.disabled = false;
+      }
+    });
+
+    async function submitCsvUpload() {
+      if (!fileInput.files.length) return;
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      const banner = document.getElementById('uploadResultBanner');
+      banner.className = 'p-4 rounded-lg text-xs font-mono bg-slate-900 border border-slate-700 text-slate-300';
+      banner.innerText = 'Processing and scoring alerts...';
+      banner.classList.remove('hidden');
+
+      try {
+        const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+        const data = await resp.json();
+        if (resp.ok) {
+          banner.className = 'p-4 rounded-lg text-xs font-mono bg-emerald-500/10 border border-emerald-500/20 text-emerald-400';
+          banner.innerHTML = `&check; ${data.message} (${data.ingested_count} alerts scored and stored).`;
+        } else {
+          banner.className = 'p-4 rounded-lg text-xs font-mono bg-rose-500/10 border border-rose-500/20 text-rose-400';
+          banner.innerHTML = `&cross; Rejected: ${data.message}`;
+        }
+      } catch (err) {
+        banner.className = 'p-4 rounded-lg text-xs font-mono bg-rose-500/10 border border-rose-500/20 text-rose-400';
+        banner.innerText = `Network or parse error: ${err.message}`;
+      }
+    }
+
+    async function testMalformedCsv(type) {
+      let csvContent = "";
+      if (type === 'missing_columns') {
+        csvContent = "alert_id,source_ip\nALT-TEST-01,10.0.1.5";
+      } else if (type === 'corrupted_encoding') {
+        csvContent = "alert_id,timestamp,severity,event_type,source_ip,user,endpoint\nALT-ERR,2024-01-01,INVALID_SEVERITY_LEVEL,Scan,10.0.1.1,admin,WS-01";
+      } else if (type === 'empty_file') {
+        csvContent = "";
+      }
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const file = new File([blob], `${type}.csv`);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const banner = document.getElementById('uploadResultBanner');
+      banner.className = 'p-4 rounded-lg text-xs font-mono bg-slate-900 border border-slate-700 text-slate-300';
+      banner.innerText = `Testing ${type}...`;
+      banner.classList.remove('hidden');
+
+      const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await resp.json();
+
+      if (resp.status === 400) {
+        banner.className = 'p-4 rounded-lg text-xs font-mono bg-amber-500/10 border border-amber-500/30 text-amber-300';
+        banner.innerHTML = `&check; Safely Rejected (HTTP 400 Expected): ${data.message}`;
+      } else {
+        banner.className = 'p-4 rounded-lg text-xs font-mono bg-slate-800 text-slate-200';
+        banner.innerText = JSON.stringify(data);
+      }
+    }
+  </script>
+</body>
+</html>

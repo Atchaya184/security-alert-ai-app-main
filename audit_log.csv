@@ -1,0 +1,26 @@
+timestamp,user,action,target_type,target_id,details,status
+2026-10-03 08:18:45,analyst_jdoe,CSV_INGESTION_REJECTED,csv_upload,bad_columns.csv,"Schema violation. Missing required columns: ['endpoint', 'event_type', 'severity', 'timestamp', 'user']",REJECTED_SCHEMA
+2026-10-03 08:18:45,analyst_bob,DISPOSITION_CONFLICT_BLOCKED,alert,ALT-CONFLICT-TEST,Conflicting disposition blocked: Attempted to downgrade 'true_incident' to 'false_positive' without override reason.,REJECTED_CONFLICT
+2026-10-03 08:18:45,analyst_bob,DISPOSITION_CONFLICT_RESOLVED,alert,ALT-CONFLICT-TEST,Conflicting disposition resolved: Changed 'true_incident' -> 'false_positive'. Reason: Authorized internal penetration test verified with ticket SEC-941.,SUCCESS
+2026-10-03 08:18:45,analyst_unauthorized,UNAUTHORIZED_ACCESS_ATTEMPT,permission_check,rollback_model,User with role 'analyst' attempted protected action requiring permission 'rollback_model'.,REJECTED_UNAUTHORIZED
+2026-10-03 08:18:45,analyst_unauthorized,UNAUTHORIZED_ACCESS_ATTEMPT,permission_check,rollback_rules,User with role 'analyst' attempted protected action requiring permission 'rollback_rules'.,REJECTED_UNAUTHORIZED
+2026-10-03 08:18:46,lead_sec,RULE_UPDATE,rule,RULE-NET-SCAN-01,Updated rule to v2. Reason: Restricting scanner subnet to 10.0.,SUCCESS
+2026-10-03 08:18:46,lead_sec,RULE_ROLLBACK,rule,RULE-NET-SCAN-01,Rolled back rule 'RULE-NET-SCAN-01' to content of v1 (as new v3). Reason: Reverting scanner rule to broad 10. subnet,SUCCESS
+2026-10-03 08:19:01,analyst_jdoe,CSV_INGESTION_REJECTED,csv_upload,bad_columns.csv,"Schema violation. Missing required columns: ['endpoint', 'event_type', 'severity', 'timestamp', 'user']",REJECTED_SCHEMA
+2026-10-03 08:19:01,analyst_bob,DISPOSITION_CONFLICT_BLOCKED,alert,ALT-CONFLICT-TEST,Conflicting disposition blocked: Attempted to downgrade 'true_incident' to 'false_positive' without override reason.,REJECTED_CONFLICT
+2026-10-03 08:19:01,analyst_bob,DISPOSITION_CONFLICT_RESOLVED,alert,ALT-CONFLICT-TEST,Conflicting disposition resolved: Changed 'true_incident' -> 'false_positive'. Reason: Authorized internal penetration test verified with ticket SEC-941.,SUCCESS
+2026-10-03 08:19:01,analyst_unauthorized,UNAUTHORIZED_ACCESS_ATTEMPT,permission_check,rollback_model,User with role 'analyst' attempted protected action requiring permission 'rollback_model'.,REJECTED_UNAUTHORIZED
+2026-10-03 08:19:01,analyst_unauthorized,UNAUTHORIZED_ACCESS_ATTEMPT,permission_check,rollback_rules,User with role 'analyst' attempted protected action requiring permission 'rollback_rules'.,REJECTED_UNAUTHORIZED
+2026-10-03 08:19:03,lead_sec,RULE_UPDATE,rule,RULE-NET-SCAN-01,Updated rule to v4. Reason: Restricting scanner subnet to 10.0.,SUCCESS
+2026-10-03 08:19:46,analyst_jdoe,CSV_INGESTION_REJECTED,csv_upload,bad_columns.csv,"Schema violation. Missing required columns: ['endpoint', 'event_type', 'severity', 'timestamp', 'user']",REJECTED_SCHEMA
+2026-10-03 08:19:46,analyst_bob,DISPOSITION_CONFLICT_BLOCKED,alert,ALT-CONFLICT-TEST,Conflicting disposition blocked: Attempted to downgrade 'true_incident' to 'false_positive' without override reason.,REJECTED_CONFLICT
+2026-10-03 08:19:46,analyst_bob,DISPOSITION_CONFLICT_RESOLVED,alert,ALT-CONFLICT-TEST,Conflicting disposition resolved: Changed 'true_incident' -> 'false_positive'. Reason: Authorized internal penetration test verified with ticket SEC-941.,SUCCESS
+2026-10-03 08:19:46,analyst_unauthorized,UNAUTHORIZED_ACCESS_ATTEMPT,permission_check,rollback_model,User with role 'analyst' attempted protected action requiring permission 'rollback_model'.,REJECTED_UNAUTHORIZED
+2026-10-03 08:19:46,analyst_unauthorized,UNAUTHORIZED_ACCESS_ATTEMPT,permission_check,rollback_rules,User with role 'analyst' attempted protected action requiring permission 'rollback_rules'.,REJECTED_UNAUTHORIZED
+2026-10-03 08:19:48,admin,MODEL_ROLLBACK,model,v1.0.0-baseline,Rolled back model from 'v2.0.0-tuned' to 'v1.0.0-baseline'. Reason: Testing rollback to baseline model,SUCCESS
+2026-10-03 08:19:48,admin,MODEL_ROLLBACK,model,v2.0.0-tuned,Rolled back model from 'v1.0.0-baseline' to 'v2.0.0-tuned'. Reason: Re-activating tuned model,SUCCESS
+2026-10-03 08:19:48,lead_sec,RULE_UPDATE,rule,RULE-NET-SCAN-01,Updated rule to v4. Reason: Restricting scanner subnet to 10.0.,SUCCESS
+2026-10-03 08:19:48,lead_sec,RULE_ROLLBACK,rule,RULE-NET-SCAN-01,Rolled back rule 'RULE-NET-SCAN-01' to content of v1 (as new v5). Reason: Reverting scanner rule to broad 10. subnet,SUCCESS
+2026-10-03 09:00:49,analyst_jdoe,CSV_INGESTION_SUCCESS,csv_upload,security_alerts_valid_v3.csv,Successfully ingested 10 alerts.,SUCCESS
+2026-10-03 09:00:59,analyst_jdoe,CSV_INGESTION_REJECTED,csv_upload,missing_columns.csv,"Schema violation. Missing required columns: ['endpoint', 'event_type', 'severity', 'timestamp', 'user']",REJECTED_SCHEMA
+2026-10-03 09:01:33,analyst_jdoe,CSV_INGESTION_REJECTED,csv_upload,missing_columns.csv,"Schema violation. Missing required columns: ['endpoint', 'event_type', 'severity', 'timestamp', 'user']",REJECTED_SCHEMA

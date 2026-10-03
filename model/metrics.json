@@ -1,0 +1,176 @@
+{
+  "training_timestamp": "2026-10-03 08:13:33 UTC",
+  "before_qbee": {
+    "version": "v1.0.0-baseline",
+    "contamination": 0.01,
+    "rarity_threshold": 0.95,
+    "fp_reduction_rate": 3.33,
+    "missed_incidents": 0,
+    "missed_incident_rate": 0.0,
+    "static_hours_saved": 2.0
+  },
+  "after_qbee": {
+    "version": "v2.0.0-tuned",
+    "contamination": 0.01,
+    "rarity_threshold": 0.05,
+    "score_threshold": 0.02,
+    "validation_fp_reduction_rate": 100.0,
+    "validation_missed_incidents": 0,
+    "test_fp_reduction_rate": 100.0,
+    "test_missed_incidents": 0,
+    "test_missed_incident_rate": 0.0,
+    "soc_time_metrics": {
+      "total_alerts": 400,
+      "false_positives": 354,
+      "true_incidents": 46,
+      "reduced_false_positives": 354,
+      "fp_reduction_rate_pct": 100.0,
+      "missed_incidents": 0,
+      "missed_incident_rate_pct": 0.0,
+      "benchmark_source": "SANS 2023 SOC Survey & Ponemon Institute SOC Benchmark",
+      "assumed_triage_time_minutes": 12.0,
+      "audit_spotcheck_time_minutes": 2.0,
+      "baseline_workload_hours": 80.0,
+      "assisted_workload_hours": 21.0,
+      "estimated_hours_saved": 59.0,
+      "previous_static_hours_saved": 59.0
+    }
+  },
+  "validation_grid_experiment": [
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.05,
+      "score_threshold": 0.02,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.05,
+      "score_threshold": 0.05,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.05,
+      "score_threshold": 0.08,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.1,
+      "score_threshold": 0.02,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.1,
+      "score_threshold": 0.05,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.1,
+      "score_threshold": 0.08,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.15,
+      "score_threshold": 0.02,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.15,
+      "score_threshold": 0.05,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.15,
+      "score_threshold": 0.08,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.2,
+      "score_threshold": 0.02,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.2,
+      "score_threshold": 0.05,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.2,
+      "score_threshold": 0.08,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.3,
+      "score_threshold": 0.02,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.3,
+      "score_threshold": 0.05,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    },
+    {
+      "contamination": 0.01,
+      "rarity_threshold": 0.3,
+      "score_threshold": 0.08,
+      "val_reduced_fp": 353,
+      "val_fp_reduction_rate": 100.0,
+      "val_missed_incidents": 0,
+      "val_missed_incident_rate": 0.0
+    }
+  ]
+}

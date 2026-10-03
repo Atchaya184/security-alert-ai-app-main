@@ -1,0 +1,9 @@
+{
+  "version": "v2.0.0-tuned",
+  "model_name": "Isolation Forest Tuned",
+  "contamination": 0.05,
+  "rarity_threshold": 0.15,
+  "score_threshold": 0.05,
+  "n_estimators": 100,
+  "random_state": 42
+}

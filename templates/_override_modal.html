@@ -1,0 +1,46 @@
+<div id="overrideModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-5">
+    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+      <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+        <span>⚠️</span> Manual Alert Override
+      </h3>
+      <button onclick="closeOverrideModal()" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+    </div>
+
+    <div>
+      <p class="text-xs text-slate-400">Target Alert: <span id="overrideAlertId" class="font-mono text-indigo-400 font-bold"></span></p>
+      <p class="text-xs text-slate-400 mt-1">Current Recommendation: <span id="overrideCurrentRec" class="text-amber-400 font-semibold"></span></p>
+    </div>
+
+    <div class="space-y-2">
+      <label class="text-xs font-semibold text-slate-300">Target Disposition</label>
+      <select id="overrideDispositionSelect" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+        <option value="false_positive">Dismiss as False Positive</option>
+        <option value="true_incident">Escalate as True Incident</option>
+        <option value="suspicious">Flag as Suspicious</option>
+      </select>
+    </div>
+
+    <div class="space-y-2">
+      <label class="text-xs font-semibold text-slate-300">Mandatory Override Reason <span class="text-rose-400">*</span></label>
+      <textarea id="overrideReasonInput" rows="3" placeholder="Explain the technical justification for overriding the AI recommendation..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 placeholder-slate-600"></textarea>
+      <p class="text-[11px] text-slate-500">Reason is permanently logged to the immutable audit trail.</p>
+    </div>
+
+    <div id="highImpactWarning" class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-300 text-xs space-y-2">
+      <div class="flex items-center gap-2 font-semibold">
+        <span>🛡️</span> High-Impact Action Confirmation
+      </div>
+      <p class="text-amber-400/90 text-[11px]">Overriding critical or true incident decisions impacts SOC safety posture. Explicit analyst confirmation required.</p>
+      <label class="flex items-center gap-2 cursor-pointer mt-1">
+        <input type="checkbox" id="humanConfirmCheckbox" class="rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-0">
+        <span class="text-slate-200 font-medium">I confirm this override was verified against endpoint telemetry</span>
+      </label>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-2">
+      <button onclick="closeOverrideModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors">Cancel</button>
+      <button onclick="executeOverride()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-500/20 transition-colors">Submit Override</button>
+    </div>
+  </div>
+</div>
