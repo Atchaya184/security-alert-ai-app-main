@@ -1,4 +1,4 @@
-# Security Alert AI App (QBee Hardened)
+# Security Alert AI App
 
 AI-assisted security alert triage application with Isolation Forest anomaly detection, dual rule/model rollback governance, and SOC workload analytics.
 
