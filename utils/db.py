@@ -11,10 +11,19 @@ def get_db_connection():
     return conn
 
 def init_db():
+    """
+    Initializes SQLite relational schema for security alert triage governance.
+    
+    Persistence Architecture:
+    - Tables: alerts, rules, rule_history, model_versions, audit_log, users.
+    - Preserves audit trails, model version registries, and historical rollback states.
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 1. Alerts table
+    # 1. Alerts Table: Core operational table storing raw telemetry, ML inference outputs, and analyst state
+    # Keys/Constraints: PRIMARY KEY (alert_id)
+    # Versioning/Audit: disposition_history (JSON array of all analyst actions and conflict resolutions)
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS alerts (
         alert_id TEXT PRIMARY KEY,
@@ -39,7 +48,9 @@ def init_db():
     )
     ''')
     
-    # 2. Rules table
+    # 2. Rules Table: Active detection rules evaluated against alerts
+    # Keys/Constraints: PRIMARY KEY (rule_id)
+    # Versioning/Audit: version (monotonically increasing integer), created_by, created_at
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS rules (
         rule_id TEXT PRIMARY KEY,
@@ -55,7 +66,9 @@ def init_db():
     )
     ''')
     
-    # 3. Rule History table (for Rule Rollback)
+    # 3. Rule History Table: Immutable append-only audit snapshot of rule modifications
+    # Keys/Constraints: PRIMARY KEY (history_id AUTOINCREMENT), Foreign Reference (rule_id)
+    # Versioning/Audit: version, changed_by, changed_at, change_reason
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS rule_history (
         history_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,7 +83,9 @@ def init_db():
     )
     ''')
     
-    # 4. Model Versions table (for Model-Level Rollback)
+    # 4. Model Versions Table: Model registry for ML governance and deterministic rollback
+    # Keys/Constraints: PRIMARY KEY (version_id)
+    # Versioning/Audit: model_artifact_path, is_active flag (only 1 active at a time), created_by, created_at
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS model_versions (
         version_id TEXT PRIMARY KEY,
@@ -89,7 +104,9 @@ def init_db():
     )
     ''')
     
-    # 5. Audit Log table
+    # 5. Audit Log Table: Immutable SOC event stream
+    # Keys/Constraints: PRIMARY KEY (id AUTOINCREMENT)
+    # Fields: timestamp, user, action, target_type, target_id, details, status
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS audit_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,7 +120,9 @@ def init_db():
     )
     ''')
     
-    # 6. Users table with RBAC
+    # 6. Users Table: Role-Based Access Control (RBAC) definitions
+    # Keys/Constraints: PRIMARY KEY (username)
+    # Roles: admin, lead_analyst, analyst
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS users (
         username TEXT PRIMARY KEY,

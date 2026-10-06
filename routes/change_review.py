@@ -34,6 +34,15 @@ def get_rule_history(rule_id):
 @change_bp.route('/api/rules/<rule_id>', methods=['POST'])
 @require_permission('manage_rules')
 def update_rule(rule_id):
+    """
+    Modifies or creates a detection rule with mandatory change justification.
+    
+    Versioning Policy:
+    - Increments rule version monotonically (v1 -> v2 -> v3).
+    - Preserves a complete historical snapshot in `rule_history` with author,
+      timestamp, and change reason.
+    - Requires 'manage_rules' RBAC permission (lead_analyst or admin).
+    """
     user = get_current_user()
     data = request.get_json() or {}
     
@@ -42,6 +51,7 @@ def update_rule(rule_id):
     action = data.get('action')
     change_reason = data.get('change_reason', '').strip()
     
+    # Validation boundary: Reject modification without technical change justification
     if not change_reason:
         return jsonify({
             'status': 'error',
@@ -86,7 +96,7 @@ def update_rule(rule_id):
             now
         ))
         
-    # Append to rule_history
+    # Append immutable historical snapshot to rule_history table
     conn.execute('''
         INSERT INTO rule_history (rule_id, version, rule_name, condition, action, changed_by, changed_at, change_reason)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -125,7 +135,12 @@ def update_rule(rule_id):
 def rollback_rule(rule_id):
     """
     Rolls back detection rule to a previous version from rule_history.
-    Preserves audit trail and requires authorization (lead_analyst or admin).
+    
+    Non-Destructive Rollback Semantics:
+    Rather than rewinding or deleting history records, the target historical state
+    is applied as a brand-new incremented version (e.g. rolling back v2 to v1 produces v3).
+    This guarantees monotonic version tracking, eliminates historical ambiguity, and ensures
+    that audit logs reflect the exact linear progression of all rule configurations.
     """
     user = get_current_user()
     data = request.get_json() or {}
@@ -152,6 +167,7 @@ def rollback_rule(rule_id):
         
     current_rule = conn.execute('SELECT * FROM rules WHERE rule_id = ?', (rule_id,)).fetchone()
     current_ver = current_rule['version'] if current_rule else 0
+    # Linear version increment preserves append-only integrity
     new_version = current_ver + 1
     now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
     

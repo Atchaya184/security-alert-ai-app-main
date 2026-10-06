@@ -73,12 +73,25 @@ def get_alert_detail(alert_id):
 
 @alert_bp.route('/api/alerts/<alert_id>/disposition', methods=['POST'])
 def submit_disposition(alert_id):
+    """
+    Records an analyst disposition decision with multi-analyst conflict detection.
+    
+    Conflict & Safety Policy (Requirement 3, Case 2):
+    - Identifies race conditions or disagreements where an alert previously marked as
+      'true_incident' is being downgraded to 'false_positive'.
+    - To prevent silent unsafe suppression of active security breaches, downgrades
+      without an explicit technical override reason are blocked with HTTP 409 Conflict.
+    - Blocked attempts are recorded as DISPOSITION_CONFLICT_BLOCKED in the audit trail.
+    - Validated overrides record full conflict metadata in `disposition_history` and emit
+      a DISPOSITION_CONFLICT_RESOLVED audit event.
+    """
     user = get_current_user()
     data = request.get_json() or {}
     new_disposition = data.get('disposition')
     override_reason = data.get('override_reason', '').strip()
     confirm_conflict = data.get('confirm_conflict', False)
     
+    # Validation boundary: Disposition must match defined taxonomy enum
     if not new_disposition or new_disposition not in ['false_positive', 'true_incident', 'suspicious']:
         return jsonify({'status': 'error', 'message': 'Invalid disposition. Must be false_positive, true_incident, or suspicious.'}), 400
         
@@ -94,17 +107,19 @@ def submit_disposition(alert_id):
     history = json.loads(alert_dict.get('disposition_history') or '[]')
     now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
     
-    # Requirement 3, Case 2: Conflicting analyst dispositions handling
+    # Conflict Detection: Compares existing settled disposition against incoming disposition
     is_conflict = (existing_disposition and 
                    existing_disposition != new_disposition and 
                    existing_disposition in ['false_positive', 'true_incident'] and 
                    new_disposition in ['false_positive', 'true_incident'])
                    
     if is_conflict:
-        # Prevent silent unsafe choice: Overriding a true incident to false positive is high-impact
+        # Prevent silent unsafe choice: Downgrading a confirmed true incident to false positive
+        # is a catastrophic risk in a SOC if done accidentally or without justification.
         if existing_disposition == 'true_incident' and new_disposition == 'false_positive':
             if not override_reason:
                 conn.close()
+                # Audit trail records blocked conflict attempt for SOC managerial review
                 log_audit_event(
                     user=user['username'],
                     action='DISPOSITION_CONFLICT_BLOCKED',
@@ -120,7 +135,7 @@ def submit_disposition(alert_id):
                     'code': 409
                 }), 409
                 
-        # If conflict is confirmed with reason, record full conflict details in history
+        # If conflict is justified with technical reason, record full conflict details in audit history
         conflict_entry = {
             'timestamp': now,
             'analyst': user['username'],
@@ -155,6 +170,7 @@ def submit_disposition(alert_id):
             status='SUCCESS'
         )
         
+    # Synchronization of operational alert workflow status
     new_status = 'closed' if new_disposition == 'false_positive' else 'escalated'
     
     conn.execute('''
@@ -177,7 +193,12 @@ def submit_disposition(alert_id):
 @alert_bp.route('/api/alerts/<alert_id>/override', methods=['POST'])
 def manual_override(alert_id):
     """
-    Existing manual override mechanism: requires reason and human confirmation for high-impact actions.
+    Manual override mechanism allowing authorized analysts to countermand ML recommendations.
+    
+    Safety Guardrail:
+    - High-impact overrides (High/Critical alerts or overriding 'Escalate / True Incident')
+      mandate both a non-empty `override_reason` AND explicit `human_confirmed=True`.
+    - Every override decision is logged immutably for periodic supervisor compliance audits.
     """
     user = get_current_user()
     data = request.get_json() or {}
@@ -185,6 +206,7 @@ def manual_override(alert_id):
     override_reason = data.get('override_reason', '').strip()
     human_confirmed = data.get('human_confirmed', False)
     
+    # Enforce mandatory justification
     if not override_reason:
         return jsonify({'status': 'error', 'message': 'Override reason is mandatory for manual overrides.'}), 400
         
@@ -196,8 +218,10 @@ def manual_override(alert_id):
         return jsonify({'status': 'error', 'message': f"Alert '{alert_id}' not found."}), 404
         
     alert_dict = dict(alert)
+    # High-impact classification check
     is_high_impact = alert_dict.get('severity') in ['High', 'Critical'] or alert_dict.get('model_recommendation') == 'Escalate / True Incident'
     
+    # Two-factor cognitive confirmation barrier for high-impact dismissals
     if is_high_impact and not human_confirmed:
         conn.close()
         return jsonify({

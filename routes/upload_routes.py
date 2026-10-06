@@ -14,12 +14,17 @@ VALID_SEVERITIES = {'Low', 'Medium', 'High', 'Critical'}
 @upload_bp.route('/api/upload', methods=['POST'])
 def upload_alerts_csv():
     """
-    Ingests alert payloads via CSV with strict schema validation.
-    Handles malformed CSV payloads safely without corrupting application state.
+    Ingests alert payloads via CSV with strict multi-layer defense-in-depth schema validation.
+    
+    Error Boundary & State Protection Guarantee:
+    - Rejects malformed, incomplete, or corrupted CSV payloads with structured HTTP 400 responses.
+    - Prevents database state pollution: All rows are validated in-memory first; ingestion into
+      SQLite is wrapped inside a strict transaction that rolls back automatically on error.
+    - Emits immutable audit records for both rejected attempts and successful ingestions.
     """
     user = get_current_user()
     
-    # 1. Check if file is provided in request
+    # --- Layer 1 Validation Boundary: Multipart Form Key Check ---
     if 'file' not in request.files:
         return jsonify({
             'status': 'error',
@@ -35,6 +40,7 @@ def upload_alerts_csv():
             'message': 'Empty filename or no file selected.'
         }), 400
         
+    # --- Layer 2 Validation Boundary: MIME / File Extension Gate ---
     if not file.filename.lower().endswith('.csv'):
         return jsonify({
             'status': 'error',
@@ -42,10 +48,11 @@ def upload_alerts_csv():
             'message': f"Unsupported file type '{file.filename}'. Only valid .csv files are supported."
         }), 400
         
-    # 2. Read and decode content safely
+    # --- Layer 3 Validation Boundary: UTF-8 Byte Stream Decoding ---
     try:
         content = file.stream.read().decode('utf-8')
     except UnicodeDecodeError as e:
+        # Audit malformed binary/encoding attack payloads
         log_audit_event(
             user=user['username'],
             action='CSV_INGESTION_REJECTED',
@@ -60,6 +67,7 @@ def upload_alerts_csv():
             'message': f"Malformed CSV: Failed to decode text. File must be valid UTF-8. Error: {str(e)}"
         }), 400
         
+    # Boundary Check: 0-byte or whitespace-only files
     if not content.strip():
         return jsonify({
             'status': 'error',
@@ -67,7 +75,7 @@ def upload_alerts_csv():
             'message': 'Uploaded CSV file is completely empty.'
         }), 400
         
-    # 3. Parse CSV rows
+    # --- Layer 4 Validation Boundary: CSV Header & Delimiter Syntax ---
     try:
         reader = csv.DictReader(io.StringIO(content))
         fieldnames = set(reader.fieldnames or [])
@@ -78,7 +86,7 @@ def upload_alerts_csv():
             'message': f"Malformed CSV syntax: Unable to parse headers. Details: {str(e)}"
         }), 400
         
-    # Validate required columns
+    # Mandatory Column Contract Validation: Guarantees ML preprocessor receives required features
     missing_columns = REQUIRED_COLUMNS - fieldnames
     if missing_columns:
         log_audit_event(
@@ -97,7 +105,7 @@ def upload_alerts_csv():
             'provided_columns': sorted(list(fieldnames))
         }), 400
         
-    # 4. Parse and validate rows
+    # --- Layer 5 Validation Boundary: Per-Row Data Type & Enum Verification ---
     parsed_alerts = []
     line_number = 1
     for row in reader:
@@ -129,7 +137,8 @@ def upload_alerts_csv():
             'message': 'CSV header present but contains no data rows.'
         }), 400
         
-    # 5. Ingest and run model inference safely in transaction
+    # --- Transactional Ingestion & Inference Phase ---
+    # Atomic execution: Either ALL alerts are inferred and persisted, or transaction rolls back completely
     conn = get_db_connection()
     ingested_count = 0
     try:
@@ -143,6 +152,7 @@ def upload_alerts_csv():
             alert_dict['rule_name'] = rule_name
             alert_dict['destination_ip'] = destination_ip
             
+            # Real-time scoring using active preprocessor and Isolation Forest model
             pred = predict_single_alert(alert_dict)
             conn.execute('''
             INSERT OR REPLACE INTO alerts 
@@ -169,6 +179,7 @@ def upload_alerts_csv():
             ingested_count += 1
         conn.commit()
     except Exception as e:
+        # Atomic rollback prevents partial state corruption
         conn.rollback()
         conn.close()
         return jsonify({

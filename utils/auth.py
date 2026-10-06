@@ -3,14 +3,29 @@ from flask import request, jsonify, session
 from utils.audit_csv import log_audit_event
 from utils.db import get_db_connection
 
-# Role hierarchy: admin > lead_analyst > analyst
+# Role-Based Access Control (RBAC) Permission Matrix
+# Role hierarchy: admin (Super-user) > lead_analyst (Senior/Lead) > analyst (Tier 1/2 SOC)
+# Principle of Least Privilege:
+# - 'admin': Full operational control including model-level rollback and system administration.
+# - 'lead_analyst': Detection engineering permissions (rule updates, rule rollback, overrides).
+# - 'analyst': Standard operational alert triage, disposition tagging, and audit log inspection.
 ROLE_PERMISSIONS = {
-    'admin': ['view_alerts', 'disposition_alert', 'override_alert', 'manage_rules', 'rollback_rules', 'retrain_model', 'rollback_model', 'view_audit', 'upload_csv'],
-    'lead_analyst': ['view_alerts', 'disposition_alert', 'override_alert', 'manage_rules', 'rollback_rules', 'view_audit', 'upload_csv'],
-    'analyst': ['view_alerts', 'disposition_alert', 'view_audit']
+    'admin': [
+        'view_alerts', 'disposition_alert', 'override_alert',
+        'manage_rules', 'rollback_rules', 'retrain_model',
+        'rollback_model', 'view_audit', 'upload_csv'
+    ],
+    'lead_analyst': [
+        'view_alerts', 'disposition_alert', 'override_alert',
+        'manage_rules', 'rollback_rules', 'view_audit', 'upload_csv'
+    ],
+    'analyst': [
+        'view_alerts', 'disposition_alert', 'view_audit'
+    ]
 }
 
 def authenticate_user(username, password):
+    """Verifies credentials against the SQLite users table."""
     conn = get_db_connection()
     user = conn.execute('SELECT * FROM users WHERE username = ? AND password_hash = ?', (username, password)).fetchone()
     conn.close()
@@ -19,7 +34,12 @@ def authenticate_user(username, password):
     return None
 
 def get_current_user():
-    # Supports session user or Authorization / X-User header for API & automated tests
+    """
+    Resolves client identity using dual-mode mechanism:
+    1. HTTP Headers ('X-User', 'X-User-Role') for REST API clients and automated tests.
+    2. Flask session store for interactive Web UI analyst sessions.
+    3. Safe default fallback to analyst_jdoe (role: analyst) for development.
+    """
     auth_header = request.headers.get('X-User-Role')
     user_header = request.headers.get('X-User', 'analyst_jdoe')
     if auth_header:
@@ -28,10 +48,20 @@ def get_current_user():
     if 'user' in session:
         return session['user']
         
-    # Default to analyst_jdoe (role: analyst) for web UI convenience if no session
+    # Default to standard analyst (role: analyst) if no session exists
     return {'username': 'analyst_jdoe', 'role': 'analyst'}
 
 def require_permission(permission):
+    """
+    Decorator enforcing endpoint authorization boundaries.
+    
+    Security Contract:
+    - If caller role possesses required permission -> proceed to wrapped function.
+    - If caller lacks permission ->
+      1. Log an immutable UNAUTHORIZED_ACCESS_ATTEMPT record in both SQLite and audit_log.csv.
+      2. Immediately abort request with HTTP 403 Forbidden structured JSON error.
+      3. Guaranteed zero state mutation on unauthorized access attempts.
+    """
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):

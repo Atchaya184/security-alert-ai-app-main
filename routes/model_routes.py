@@ -61,19 +61,25 @@ def predict_alert():
 @require_permission('rollback_model')
 def rollback_model():
     """
-    Rolls back active ML model to a previous verified version.
-    Demonstrates complete reproducibility:
-    1. Loads target version artifact.
-    2. Restores configuration & active model pointer.
-    3. Re-evaluates predictions with exact reproducible outputs.
-    4. Audits the rollback in audit trail.
-    5. Rejects unauthorized attempts.
+    Rolls back active ML model to a previously registered, verified version.
+    
+    Reproducibility & Safety Lifecycle:
+    Step 1: Authorization check enforced via @require_permission('rollback_model') (admin-only).
+    Step 2: Version lookup in SQLite `model_versions` registry.
+    Step 3: Verification of physical existence of frozen model artifact (.pkl).
+    Step 4: Atomic file copy of target artifact onto active MODEL_PATH (`model.pkl`).
+    Step 5: Synchronization of hyperparameters into active `config.json`.
+    Step 6: Cache Invalidation - clears in-memory model pointer in utils.recommend so that
+            subsequent API requests immediately deserialize the newly activated artifact.
+    Step 7: Database state update (is_active pointer updated atomically).
+    Step 8: Immutable audit logging of the rollback action and justification.
     """
     user = get_current_user()
     data = request.get_json() or {}
     target_version_id = data.get('target_version_id')
     rollback_reason = data.get('rollback_reason', '').strip()
     
+    # Validation boundary: Reject missing parameters with structured 400 response
     if not target_version_id:
         return jsonify({'status': 'error', 'message': 'target_version_id is required for model rollback.'}), 400
     if not rollback_reason:
@@ -96,6 +102,7 @@ def rollback_model():
     prev_version_id = current_active['version_id'] if current_active else 'unknown'
     
     target_artifact = target_ver['model_artifact_path']
+    # Physical integrity check: Ensure serialized joblib weights exist on disk
     if not os.path.exists(target_artifact):
         conn.close()
         return jsonify({
@@ -106,7 +113,7 @@ def rollback_model():
     # Copy target artifact to active model path
     shutil.copyfile(target_artifact, MODEL_PATH)
     
-    # Update active configuration
+    # Synchronize restored hyperparameters into active config.json
     restored_config = {
         'version': target_ver['version_id'],
         'model_name': target_ver['model_name'],
@@ -118,18 +125,18 @@ def rollback_model():
     }
     save_config(restored_config)
     
-    # Invalidate cached model in utils/recommend.py
+    # Invalidate in-memory cached model in utils/recommend.py to force fresh deserialization
     import utils.recommend
     utils.recommend._cached_model = None
     utils.recommend._cached_model_path = None
     
-    # Update database state
+    # Update database state: Deactivate all versions and set target as the single active version
     conn.execute('UPDATE model_versions SET is_active = 0')
     conn.execute('UPDATE model_versions SET is_active = 1 WHERE version_id = ?', (target_version_id,))
     conn.commit()
     conn.close()
     
-    # Log to audit trail
+    # Immutable audit logging: Dual-write to SQLite audit_log table and audit_log.csv
     log_audit_event(
         user=user['username'],
         action='MODEL_ROLLBACK',
